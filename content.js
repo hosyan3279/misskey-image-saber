@@ -31,11 +31,18 @@ function addSaveButton(article) {
     e.preventDefault();
     e.stopPropagation();
     console.log('Save button clicked');
+    
+    // ボタンの状態を「ダウンロード中」に変更
+    saveButton.classList.add('downloading');
+    saveButton.innerHTML = '<i class="ti ti-loader"></i>';
+
     const mediaElements = article.querySelectorAll('.xbIzI .xnU59.xesxE.image img.xkJBF, .xbIzI .xnU59.xesxE.video video');
     const usernameElement = article.querySelector('.xBLVI > span > span');
     const username = usernameElement ? usernameElement.textContent.replace('@', '') : 'unknown';
     console.log('Username found:', username);
     console.log('Found', mediaElements.length, 'media elements');
+    
+    let downloadCount = 0;
     mediaElements.forEach((media) => {
       const src = media.tagName === 'VIDEO' ? media.src : media.src;
       const originalFilename = src.split('/').pop().split('?')[0];
@@ -45,10 +52,25 @@ function addSaveButton(article) {
         action: "download",
         url: src,
         filename: newFilename
+      }, (response) => {
+        if (response && response.success) {
+          downloadCount++;
+          if (downloadCount === mediaElements.length) {
+            // すべてのダウンロードが完了したら、ボタンの状態を「完了」に変更
+            saveButton.classList.remove('downloading');
+            saveButton.classList.add('completed');
+            saveButton.innerHTML = '<i class="ti ti-check"></i>';
+            
+            // 3秒後にボタンを元の状態に戻す
+            setTimeout(() => {
+              saveButton.classList.remove('completed');
+              saveButton.innerHTML = '<i class="ti ti-download"></i>';
+            }, 3000);
+          }
+        }
       });
     });
   };
-
   // ボタンを '...' ボタンの前に挿入
   const moreButton = footer.querySelector('button:last-child');
   if (moreButton) {
@@ -64,11 +86,16 @@ function addContextMenu() {
   document.addEventListener('contextmenu', function(e) {
     const target = e.target;
     if (target.tagName === 'IMG' && target.classList.contains('xkJBF')) {
-      e.preventDefault();
-      console.log('Context menu triggered for image:', target.src);
+      const article = target.closest('.x5yeR');
+      if (article) {
+        const usernameElement = article.querySelector('.xBLVI > span > span');
+        const username = usernameElement ? usernameElement.textContent.replace('@', '') : 'unknown';
+        target.dataset.username = username;
+      }
       chrome.runtime.sendMessage({
-        action: "createContextMenu",
-        imageUrl: target.src
+        action: "updateContextMenu",
+        imageUrl: target.src,
+        username: target.dataset.username
       });
     }
   }, true);
