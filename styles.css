@@ -1,0 +1,11 @@
+.save-images-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 8px;
+  color: inherit;
+}
+
+.save-images-button:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
