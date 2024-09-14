@@ -1,6 +1,13 @@
 let currentImageInfo = null;
+let savedPosts = {};
 
 chrome.runtime.onInstalled.addListener(() => {
+  chrome.storage.local.get(['savedPosts'], function(result) {
+    if (result.savedPosts) {
+      savedPosts = result.savedPosts;
+    }
+  });
+
   chrome.contextMenus.create({
     id: "saveImage",
     title: "この画像を保存",
@@ -37,9 +44,21 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         sendResponse({success: false});
       } else {
         console.log('Download started with ID:', downloadId);
+        // 保存したポストを記録
+        if (!savedPosts[request.postId]) {
+          savedPosts[request.postId] = [];
+        }
+        savedPosts[request.postId].push(request.url);
+        chrome.storage.local.set({savedPosts: savedPosts}, () => {
+          console.log('Saved posts updated:', savedPosts);
+        });
         sendResponse({success: true});
       }
     });
     return true; // 非同期レスポンスを示す
+  } else if (request.action === "checkSavedStatus") {
+    const isSaved = savedPosts.hasOwnProperty(request.postId);
+    console.log('Checking saved status for post ID:', request.postId, 'Is saved:', isSaved);
+    sendResponse({isSaved: isSaved});
   }
 });
